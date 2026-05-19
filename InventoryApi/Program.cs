@@ -1,8 +1,32 @@
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// 1. Define the OTel Service Name
+var serviceName = "InventoryApi";
+
+// 2. Register OpenTelemetry
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(serviceName))
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddOtlpExporter())
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddOtlpExporter());
+
+// 3. Register Health Checks
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
 app.UseHttpsRedirection();
+
+app.MapHealthChecks("/health/live");
+app.MapHealthChecks("/health/ready");
 
 app.MapGet("/api/inventory/{productId}", (string productId) =>
 {
